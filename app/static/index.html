@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MiniPay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+    section { border: 1px solid #ccc; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    label { display: block; margin: .5rem 0 .2rem; }
+    input { padding: .4rem; width: 100%; box-sizing: border-box; }
+    button { margin-top: .6rem; padding: .5rem 1rem; }
+    pre { background: #f5f5f5; padding: .6rem; overflow-x: auto; }
+    .error { color: #b00020; } .ok { color: #1b6e20; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>MiniPay</h1>
+
+  <section id="login-section">
+    <h2>Login</h2>
+    <label for="api-key">API key</label>
+    <input id="api-key" data-testid="api-key-input" type="password" autocomplete="off">
+    <button id="login-btn" data-testid="login-button">Login</button>
+    <div id="login-message" data-testid="login-message" role="status"></div>
+  </section>
+
+  <div id="app-section" class="hidden" data-testid="app-section">
+    <section>
+      <h2>Search transaction</h2>
+      <label for="search-input">Transaction ref or id</label>
+      <input id="search-input" data-testid="search-input" placeholder="TXN00000123">
+      <button id="search-btn" data-testid="search-button">Search</button>
+      <div id="search-message" data-testid="search-message" role="status"></div>
+      <pre id="search-result" data-testid="search-result" class="hidden"></pre>
+    </section>
+
+    <section>
+      <h2>Create payment</h2>
+      <label for="pay-customer">Customer id</label>
+      <input id="pay-customer" data-testid="payment-customer-input" inputmode="numeric">
+      <label for="pay-amount">Amount</label>
+      <input id="pay-amount" data-testid="payment-amount-input" inputmode="decimal">
+      <button id="pay-btn" data-testid="payment-submit-button">Submit payment</button>
+      <div id="pay-message" data-testid="payment-message" role="status"></div>
+      <pre id="pay-result" data-testid="payment-result" class="hidden"></pre>
+    </section>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let apiKey = sessionStorage.getItem("minipay_key") || "";
+
+  async function api(path, options = {}) {
+    const headers = Object.assign({ "X-API-Key": apiKey }, options.headers || {});
+    const resp = await fetch(path, Object.assign({}, options, { headers }));
+    let body = null;
+    try { body = await resp.json(); } catch (e) { /* non-JSON */ }
+    return { status: resp.status, body };
+  }
+  function say(el, text, ok) { el.textContent = text; el.className = ok ? "ok" : "error"; }
+
+  async function login() {
+    apiKey = $("api-key").value.trim();
+    const r = await api("/api/payments?limit=1");
+    if (r.status === 200) {
+      sessionStorage.setItem("minipay_key", apiKey);
+      $("login-section").classList.add("hidden");
+      $("app-section").classList.remove("hidden");
+    } else {
+      say($("login-message"), "Login failed: invalid API key", false);
+    }
+  }
+
+  async function search() {
+    const q = $("search-input").value.trim();
+    $("search-result").classList.add("hidden");
+    if (!q) { say($("search-message"), "Enter a transaction ref or id", false); return; }
+    const r = await api("/api/payments/" + encodeURIComponent(q));
+    if (r.status === 200) {
+      say($("search-message"), "Found " + r.body.transaction_ref + " - status " + r.body.status, true);
+      $("search-result").textContent = JSON.stringify(r.body, null, 2);
+      $("search-result").classList.remove("hidden");
+    } else if (r.status === 404) {
+      say($("search-message"), "Transaction not found", false);
+    } else {
+      say($("search-message"), "Search failed (HTTP " + r.status + ")", false);
+    }
+  }
+
+  async function pay() {
+    const customer = parseInt($("pay-customer").value, 10);
+    const amount = parseFloat($("pay-amount").value);
+    $("pay-result").classList.add("hidden");
+    const r = await api("/api/payments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({ customer_id: customer, amount: amount }),
+    });
+    if (r.status === 201 || r.status === 200) {
+      say($("pay-message"), "Payment " + r.body.transaction_ref + " " + r.body.status, true);
+      $("pay-result").textContent = JSON.stringify(r.body, null, 2);
+      $("pay-result").classList.remove("hidden");
+    } else {
+      const msg = r.body && r.body.error ? r.body.error.message : "HTTP " + r.status;
+      say($("pay-message"), "Payment failed: " + msg, false);
+    }
+  }
+
+  $("login-btn").addEventListener("click", login);
+  $("search-btn").addEventListener("click", search);
+  $("pay-btn").addEventListener("click", pay);
+  if (apiKey) { $("api-key").value = apiKey; login(); }
+</script>
+</body>
+</html>
