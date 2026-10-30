@@ -1,0 +1,48 @@
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Seq Scan on transactions  (cost=0.00..1241.00 rows=1 width=36) (actual time=2.690..4.294 rows=1 loops=1)
+   Filter: ((transaction_ref)::text = 'TXN00031234'::text)
+   Rows Removed by Filter: 49999
+   Buffers: shared hit=616
+ Planning:
+   Buffers: shared hit=77
+ Planning Time: 0.236 ms
+ Execution Time: 4.324 ms
+(8 rows)
+
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=1242.96..1243.08 rows=50 width=44) (actual time=2.810..2.817 rows=50 loops=1)
+   Buffers: shared hit=619
+   ->  Sort  (cost=1242.96..1243.12 rows=65 width=44) (actual time=2.809..2.812 rows=50 loops=1)
+         Sort Key: created_at DESC
+         Sort Method: quicksort  Memory: 30kB
+         Buffers: shared hit=619
+         ->  Seq Scan on transactions  (cost=0.00..1241.00 rows=65 width=44) (actual time=0.012..2.771 rows=73 loops=1)
+               Filter: (customer_id = 436)
+               Rows Removed by Filter: 49927
+               Buffers: shared hit=616
+ Planning:
+   Buffers: shared hit=35
+ Planning Time: 0.152 ms
+ Execution Time: 2.858 ms
+(14 rows)
+
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=1695.76..1695.88 rows=50 width=28) (actual time=4.728..4.735 rows=50 loops=1)
+   Buffers: shared hit=616
+   ->  Sort  (cost=1695.76..1701.76 rows=2401 width=28) (actual time=4.727..4.730 rows=50 loops=1)
+         Sort Key: created_at
+         Sort Method: top-N heapsort  Memory: 31kB
+         Buffers: shared hit=616
+         ->  Seq Scan on transactions  (cost=0.00..1616.00 rows=2401 width=28) (actual time=0.010..4.350 rows=2443 loops=1)
+               Filter: (((status)::text = 'PROCESSING'::text) AND (created_at < (CURRENT_TIMESTAMP - '00:15:00'::interval)))
+               Rows Removed by Filter: 47557
+               Buffers: shared hit=616
+ Planning:
+   Buffers: shared hit=7
+ Planning Time: 0.077 ms
+ Execution Time: 4.747 ms
+(14 rows)
+

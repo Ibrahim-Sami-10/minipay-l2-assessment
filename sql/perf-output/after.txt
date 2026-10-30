@@ -1,0 +1,37 @@
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using idx_transactions_ref on transactions  (cost=0.29..8.31 rows=1 width=36) (actual time=0.068..0.070 rows=1 loops=1)
+   Index Cond: ((transaction_ref)::text = 'TXN00031234'::text)
+   Buffers: shared hit=1 read=2
+ Planning:
+   Buffers: shared hit=124 read=3
+ Planning Time: 0.707 ms
+ Execution Time: 0.114 ms
+(7 rows)
+
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.29..195.19 rows=50 width=44) (actual time=0.095..0.392 rows=50 loops=1)
+   Buffers: shared hit=53 read=2
+   ->  Index Scan using idx_transactions_customer_created on transactions  (cost=0.29..261.45 rows=67 width=44) (actual time=0.095..0.384 rows=50 loops=1)
+         Index Cond: (customer_id = 436)
+         Buffers: shared hit=53 read=2
+ Planning:
+   Buffers: shared hit=41
+ Planning Time: 0.136 ms
+ Execution Time: 0.413 ms
+(9 rows)
+
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.28..53.33 rows=50 width=28) (actual time=0.077..0.325 rows=50 loops=1)
+   Buffers: shared hit=50 read=2
+   ->  Index Scan using idx_transactions_processing on transactions  (cost=0.28..2542.12 rows=2396 width=28) (actual time=0.076..0.317 rows=50 loops=1)
+         Index Cond: (created_at < (CURRENT_TIMESTAMP - '00:15:00'::interval))
+         Buffers: shared hit=50 read=2
+ Planning:
+   Buffers: shared hit=7
+ Planning Time: 0.148 ms
+ Execution Time: 0.344 ms
+(9 rows)
+
