@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minipay-db-data
+  namespace: minipay
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minipay-db
+  namespace: minipay
+  labels:
+    app: minipay-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minipay-db
+  template:
+    metadata:
+      labels:
+        app: minipay-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: minipay-config
+                  key: DB_NAME
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: minipay-config
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minipay-secrets
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minipay-db-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minipay-db
+  namespace: minipay
+spec:
+  selector:
+    app: minipay-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgres

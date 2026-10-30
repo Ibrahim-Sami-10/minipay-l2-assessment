@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minipay-api
+  namespace: minipay
+  labels:
+    app: minipay-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: minipay-api
+template:
+  metadata:
+    labels:
+      app: minipay-api
+  spec:
+    containers:
+      - name: api
+        image: minipay-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8080
+            name: http
+        env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: minipay-config
+                key: DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: minipay-config
+                key: DB_PORT
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: minipay-config
+                key: DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: minipay-config
+                key: DB_USER
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: minipay-secrets
+                key: POSTGRES_PASSWORD
+          - name: API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: minipay-secrets
+                key: API_KEY
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        readinessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minipay-api
+  namespace: minipay
+  labels:
+    app: minipay-api
+spec:
+  selector:
+    app: minipay-api
+  ports:
+    - port: 80
+      targetPort: 8080
+      name: http
