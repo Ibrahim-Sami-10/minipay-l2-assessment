@@ -67,15 +67,6 @@ def query(sql, params=()):
         return cur.fetchall()
 
 
-# DELIBERATE FLAW FOR INCIDENT-001: Assumes transaction_ref is unique
-def fetch_one_strict(rows):
-    if len(rows) == 0:
-        return None
-    if len(rows) > 1:
-        raise RuntimeError(f"expected exactly 1 row, got {len(rows)}")
-    return rows[0]
-
-
 # --------------------------------------------------------------------------
 # Response Helpers
 # --------------------------------------------------------------------------
@@ -357,17 +348,27 @@ def list_payments():
 
 @app.get("/api/payments/<ident>")
 def get_payment(ident):
+    """ident is either the numeric id (e.g. 123) or a transaction_ref (e.g. TXN00000123).
+
+    transaction_ref is NOT unique in the database (imported data contains duplicates).
+    We return the oldest match, flag the duplicate status, and log a warning.
+    """
     if ident.isdigit():
         rows = query(f"SELECT {PAYMENT_COLS} FROM transactions WHERE id=%s", (int(ident),))
     else:
-        rows = query(f"SELECT {PAYMENT_COLS} FROM transactions WHERE transaction_ref=%s", (ident,))
-    
-    # CALLS THE DELIBERATELY BUGGY STRICT CHECK
-    row = fetch_one_strict(rows)
-    if row is None:
-        return error(404, "payment_not_found", f"Payment {ident} not found")
-    return jsonify(payment_with_callbacks(row))
+        rows = query(f"SELECT {PAYMENT_COLS} FROM transactions WHERE transaction_ref=%s ORDER BY id", (ident,))
 
+    if not rows:
+        return error(404, "payment_not_found", f"Payment {ident} not found")
+
+    out = payment_with_callbacks(rows[0])
+    if len(rows) > 1:
+        out["duplicate_reference"] = True
+        out["duplicate_ids"] = [r["id"] for r in rows]
+        log.warning("req_id=%s duplicate transaction_ref=%s ids=%s",
+                    g.get("request_id"), ident, out["duplicate_ids"])
+
+    return jsonify(out)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(cfg("PORT", "8080")))
