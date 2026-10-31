@@ -10,6 +10,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/app_extras.sql:/docker-entrypoint-initdb.d/02-app-extras.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U minipay -d minipay"]
       interval: 5s
@@ -34,6 +36,12 @@ services:
       PORT: "8080"
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health/live', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   postgres_data:

@@ -20,14 +20,21 @@ docker compose up -d --build
 until curl -fsS http://localhost:8080/health >/dev/null; do sleep 2; done
 ```
 
-The database volume is persistent. On a new volume, initialize the schema and
-seed data once:
+The database volume is persistent. On a new volume, Compose automatically
+initializes the schema and application tables from the mounted SQL files. Load
+the synthetic seed data once:
 
 ```bash
-docker compose exec -T db psql -U minipay -d minipay < database/schema.sql
-docker compose exec -T db psql -U minipay -d minipay < database/app_extras.sql
 python database/generate_data.py > /tmp/minipay-seed.sql
 docker compose exec -T db psql -U minipay -d minipay < /tmp/minipay-seed.sql
+```
+
+If the database volume was already created before the SQL mounts were added,
+recreate it only when its data can be discarded:
+
+```bash
+docker compose down -v
+docker compose up -d --build
 ```
 
 Verify the service:
@@ -39,6 +46,12 @@ curl -fsS http://localhost:8080/health
 
 The API uses `API_KEY` in `.env`. The test fixtures accept either `API_KEY` or
 `MINIPAY_API_KEY`, so the test command can be run directly after sourcing `.env`.
+
+## Git workflow
+
+Work was developed in small commits on `main`, with the assessment submission
+marked by the annotated `submission-v1.0` tag. The final branch should be pushed
+with its tag using `git push origin main --follow-tags`.
 
 ## Tests
 
