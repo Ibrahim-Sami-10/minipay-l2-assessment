@@ -24,3 +24,10 @@ You are joining an implementation/L2 support team responsible for **MiniPay**, a
 11. Effective and responsible use of AI tools
 
 Read `INSTRUCTIONS.md` before starting. The files under `requirements/` define the tasks. The `incidents/` folder contains support incidents to investigate.
+
+## Submission documentation
+
+- [Setup and test commands](SETUP.md)
+- [Architecture](ARCHITECTURE.md)
+- [AI usage and validation](AI_USAGE.md)
+- [Rancher evidence](evidence/rancher.md)

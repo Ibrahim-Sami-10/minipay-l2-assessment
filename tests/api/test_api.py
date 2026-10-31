@@ -194,3 +194,17 @@ def test_list_payments_by_status(base_url, auth_headers):
     assert resp.status_code == 200
     data = resp.json()
     assert all(p["status"] == "PROCESSING" for p in data["payments"])
+
+
+def test_create_payment_invalid_amount(base_url, auth_headers, unique_idempotency_key):
+    headers = dict(auth_headers)
+    headers["Idempotency-Key"] = unique_idempotency_key
+    resp = requests.post(f"{base_url}/api/payments", json={"customer_id": 1, "amount": -10.00}, headers=headers, timeout=5)
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "validation_error"
+
+
+def test_payment_lookup_response_time(base_url, auth_headers):
+    resp = requests.get(f"{base_url}/api/payments/TXN00000123", headers=auth_headers, timeout=5)
+    assert resp.status_code == 200
+    assert resp.elapsed.total_seconds() < 0.5

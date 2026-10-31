@@ -4,14 +4,14 @@ import pytest
 from playwright.sync_api import Page, expect
 
 BASE_URL = os.environ.get("MINIPAY_API_URL", "http://localhost:8080").rstrip("/")
-API_KEY = os.environ.get("MINIPAY_API_KEY")
+API_KEY = os.environ.get("MINIPAY_API_KEY") or os.environ.get("API_KEY")
 
 
 @pytest.fixture(autouse=True)
 def check_api_key():
     if not API_KEY:
         pytest.fail(
-            "MINIPAY_API_KEY is not set. Export it before running tests:\n"
+            "MINIPAY_API_KEY or API_KEY is not set. Export it before running tests:\n"
             "  export MINIPAY_API_KEY=$(grep '^API_KEY=' .env | cut -d '=' -f2-)"
         )
 

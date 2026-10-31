@@ -133,3 +133,14 @@ This run checked the Docker Compose stack on port 8080. The script exits with a 
 **Unreachable API:** check that the port is listening (`ss -tulpn`) and that the container is running (`docker compose ps`). Test the API locally with `curl`. If it works locally, the problem is outside the app, such as port mapping or firewall rules. If it's refused, read the container logs.
 
 **Repeatedly terminating process:** check the exit code and whether the process was killed for memory (OOM). In Kubernetes, use `kubectl describe pod`. With Docker, use `docker inspect`.
+
+
+## 9. Application and container logs
+
+```console
+$ docker compose logs --tail=8 api
+api-1  | 2026-10-31 10:07:37,112 INFO minipay req_id=8f3a19c204b1 GET /health/live -> 200 0.4ms
+api-1  | 2026-10-31 10:07:37,145 INFO minipay req_id=4c91e0b712a9 GET /health -> 200 2.1ms
+api-1  | 2026-10-31 10:58:12,402 INFO minipay req_id=77215b593664 GET /api/payments/TXN00000123 -> 200 1.8ms
+api-1  | 2026-10-31 10:58:19,884 WARNING minipay req_id=01c15a162aab duplicate transaction_ref=TXN00004999 ids=[4999, 5000]
+api-1  | 2026-10-31 10:58:19,885 INFO minipay req_id=01c15a162aab GET /api/payments/TXN00004999 -> 200 2.3ms
